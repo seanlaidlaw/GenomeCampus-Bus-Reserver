@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
+import yaml
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
@@ -8,30 +10,9 @@ import json
 import logging
 
 
-# configure the IDs for different bus stops
-CASTLE_CODE = "0500CCITY275"
-CENTENNIAL_CODE = "0500CCITY022"
-CAMPUS_CODE = "BUSHUBd6ZTW0SS"
-
-# configure the date and time of the bus you want to book
-PICKUP_ATCOCODE = CENTENNIAL_CODE
-DROPOFF_ATCOCODE = CAMPUS_CODE
-
 # configuring the logger to info log levek
 log = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
-
-
-# each combination of bus stops has its own route ID for NC/CC/EC etc.
-LINE_ID = ""
-if PICKUP_ATCOCODE == CASTLE_CODE or DROPOFF_ATCOCODE == CASTLE_CODE:
-    LINE_ID = "85334"
-elif PICKUP_ATCOCODE == CENTENNIAL_CODE or DROPOFF_ATCOCODE == CENTENNIAL_CODE:
-    LINE_ID = "85336"
-
-if LINE_ID == "":
-    log.error("🚩 could not identify bus route from these stops")
-    raise Exception()
 
 
 def get_upcoming_dates(start_date):
@@ -227,9 +208,7 @@ def get_existing_reservations(COOKIE):
     # Find the table with class "table"
     table = soup.find("table", class_="table")
     if not table:
-        log.error(
-            f"🚩 Couldn't find table with existing reservations on usual webpage."
-        )
+        log.error(f"🚩 Couldn't find table with existing reservations on usual webpage.")
         raise Exception()
 
     # Initialize an empty list to store dictionaries representing each row
@@ -340,39 +319,135 @@ with open("bushub_cookie.txt") as f:
 # get details of existing bus reservations
 existing_reservations = get_existing_reservations(COOKIE)
 # convert time of reservations to string format for comparing with available reservations
-existing_reserved_days = [
-    datetime.strftime(item["dateISO"], "%Y-%m-%d") for item in existing_reservations
-]
+# split into two lists one for morning and one for evening so we can check if we
+# have already booked a bus for that part of day
+existing_reserved_mornings = []
+existing_reserved_evenings = []
+for item in existing_reservations:
+    if item[""] != "Cancelled":
+        # if the datetime is before noon
+        if datetime.strptime(item["datetimeISO"], "%Y-%m-%dT%H:%M:%S").hour < 12:
+            existing_reserved_mornings.append(item["dateISO"].strftime("%Y-%m-%d"))
+        else:
+            existing_reserved_evenings.append(item["dateISO"].strftime("%Y-%m-%d"))
+
+
+# Load configuration from YAML file
+with open("config.yaml", "r") as file:
+    config = yaml.safe_load(file)
 
 # get string format of every date in next week (bar weekends)
 next_dates = get_upcoming_dates(start_date=None)
+
 for TRAVEL_DATE in next_dates:
     dateISO = datetime.strptime(TRAVEL_DATE, "%Y-%m-%d").date()
-    if TRAVEL_DATE in existing_reserved_days:
-        log.info(f"🚌 Bus already booked for {TRAVEL_DATE}.")
+    day_name = dateISO.strftime("%A")  # Get day name like Monday, Tuesday, etc.
+
+    # Skip if day not in config
+    if day_name not in config["days"]:
+        log.info(f"⛔ No configuration for {day_name}. Skipping...")
         continue
 
-    # get list of buses with available seats on the desired date
-    available_buses = get_available_buses(
-        TRAVEL_DATE, LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE
-    )
+    for period in ["AM", "PM"]:
+        PICKUP_ATCOCODE, DROPOFF_ATCOCODE = None, None
+        if "pickup" in config["days"][day_name]:
+            PICKUP_ATCOCODE = config["days"][day_name]["pickup"]
+        if period in config["days"][day_name]:
+            PICKUP_ATCOCODE = config["days"][day_name][period]["pickup"]
 
-    # attempt booking bus ticket in order of latest departure time
-    for item in available_buses:
-        # get bus departure time and id of bus route (line id)
-        bus_time = item["scheduledDepartureTime"]
-        bus_line = item["lineId"]
+        if "dropoff" in config["days"][day_name]:
+            DROPOFF_ATCOCODE = config["days"][day_name]["dropoff"]
+        if period in config["days"][day_name]:
+            DROPOFF_ATCOCODE = config["days"][day_name][period]["dropoff"]
 
-        # get id of currently owned ticket
-        ticket_id = get_booking_tickets(bus_line, COOKIE)
+        if PICKUP_ATCOCODE is None or DROPOFF_ATCOCODE is None:
+            log.info(f"⛔ No configuration for {day_name} {period}. Skipping...")
+            continue
 
-        # attempt to reserve bus ticket
-        # on error (e.g. bus is full), try next bus
-        reserved = reserve_bus(
-            bus_time, bus_line, PICKUP_ATCOCODE, DROPOFF_ATCOCODE, COOKIE, ticket_id
+        # each combination of bus stops has its own route ID for NC/CC/EC etc.
+        LINE_ID = None
+        cc_morning_destinations = [
+            "0500CCITY080",
+            "0500CCITY236",
+            "0500CCITY022",
+            "0500CCITY247",
+        ]
+        nc_morning_destinations = [
+            "0500CCITY054",
+            "0500CCITY358",
+            "0500CCITY275",
+            "BUSHUBvHONYOgd",
+            "0500CCITY426",
+        ]
+        cc_evening_destinations = [
+            "0500CCITY081",
+            "0500CCITY234",
+            "0500CCITY035",
+            "0500CCITY222",
+        ]
+        nc_evening_destinations = [
+            "0500CCITY142",
+            "BUSHUBYHAuXOEU",
+            "0500CCITY261",
+            "0500CCITY107",
+            "0500CCITY092",
+            "0500CCITY140",
+            "0500CCITY338",
+            "0500CCITY426",
+        ]
+        valid_destination_ids = ["BUSHUBd6ZTW0SS"]  # Campus
+        valid_destination_ids += cc_evening_destinations
+        valid_destination_ids += nc_evening_destinations
+
+        if DROPOFF_ATCOCODE not in valid_destination_ids:
+            log.error(
+                "🚩 specified ID for drop-off is not a valid drop-off ID. You specified: "
+                + DROPOFF_ATCOCODE
+            )
+            raise Exception()
+
+        if PICKUP_ATCOCODE in cc_morning_destinations:
+            LINE_ID = "85336"  # CC route ID
+        elif PICKUP_ATCOCODE in nc_morning_destinations:
+            LINE_ID = "86367"  # NC route ID
+
+        if DROPOFF_ATCOCODE in cc_evening_destinations:
+            LINE_ID = "85336"  # CC route ID
+        elif DROPOFF_ATCOCODE in nc_evening_destinations:
+            LINE_ID = "86367"  # NC evening route ID
+
+        if not LINE_ID:
+            log.error("🚩 could not identify bus route from these stops")
+            raise Exception()
+
+        existing_reservations_period = (
+            existing_reserved_mornings if period == "AM" else existing_reserved_evenings
         )
-        if reserved:
-            if reserved.ok:
-                break  # break to not book multiple buses for same day
-        else:
-            break
+        if TRAVEL_DATE in existing_reservations_period:
+            log.info(f"🚌 Bus already booked for {TRAVEL_DATE}.")
+            continue
+
+        # get list of buses with available seats on the desired date
+        available_buses = get_available_buses(
+            TRAVEL_DATE, LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE
+        )
+
+        # attempt booking bus ticket in order of latest departure time
+        for item in available_buses:
+            # get bus departure time and id of bus route (line id)
+            bus_time = item["scheduledDepartureTime"]
+            bus_line = item["lineId"]
+
+            # get id of currently owned ticket
+            ticket_id = get_booking_tickets(bus_line, COOKIE)
+
+            # attempt to reserve bus ticket
+            # on error (e.g. bus is full), try next bus
+            reserved = reserve_bus(
+                bus_time, bus_line, PICKUP_ATCOCODE, DROPOFF_ATCOCODE, COOKIE, ticket_id
+            )
+            if reserved:
+                if reserved.ok:
+                    break  # break to not book multiple buses for same day
+            else:
+                break

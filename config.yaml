@@ -1,0 +1,36 @@
+days:
+  Monday:
+    AM:
+      pickup: 0500CCITY022
+      dropoff: BUSHUBd6ZTW0SS
+    PM:
+      pickup: BUSHUBd6ZTW0SS
+      dropoff: 0500CCITY035
+  Tuesday:
+    AM:
+      pickup: 0500CCITY022
+      dropoff: BUSHUBd6ZTW0SS
+    PM:
+      pickup: BUSHUBd6ZTW0SS
+      dropoff: 0500CCITY261
+  Wednesday:
+    AM:
+      pickup: 0500CCITY275
+      dropoff: BUSHUBd6ZTW0SS
+    PM:
+      pickup: BUSHUBd6ZTW0SS
+      dropoff: 0500CCITY261
+  Thursday:
+    AM:
+      pickup: 0500CCITY275
+      dropoff: BUSHUBd6ZTW0SS
+    PM:
+      pickup: BUSHUBd6ZTW0SS
+      dropoff: 0500CCITY035
+  Friday:
+    AM:
+      pickup: 0500CCITY022
+      dropoff: BUSHUBd6ZTW0SS
+    PM:
+      pickup: BUSHUBd6ZTW0SS
+      dropoff: 0500CCITY035
