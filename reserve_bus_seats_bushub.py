@@ -17,14 +17,6 @@ CAMPUS_CODE = "BUSHUBd6ZTW0SS"
 PICKUP_ATCOCODE = CENTENNIAL_CODE
 DROPOFF_ATCOCODE = CAMPUS_CODE
 
-# read in cookie file that contains the ; separated string for the BusHub cookie
-# to obtain it, you open the developer tools in your browser, go to the network tab
-# login to https://wellcomegenomecampus.bushub.co.uk/bookings and click on the
-# bookings request, then copy the cookie string from the request headers
-# save its contents into this file
-with open("bushub_cookie.txt") as f:
-    COOKIE = f.read()
-
 # configuring the logger to info log levek
 log = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
@@ -64,6 +56,55 @@ def get_upcoming_dates(start_date):
         current_date += timedelta(days=1)
 
     return date_list
+
+
+def login_and_save_cookie(username, password):
+    # Define the login page and endpoint URLs
+    login_page_url = "https://wellcomegenomecampus.bushub.co.uk/"
+    login_endpoint_url = (
+        "https://wellcomegenomecampus.bushub.co.uk/account/BushubLoginMainResult"
+    )
+
+    # Headers extracted from the curl command
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
+        "Origin": "https://wellcomegenomecampus.bushub.co.uk",
+        "Referer": "https://wellcomegenomecampus.bushub.co.uk/?redirectUrl=/bookings",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8,fr;q=0.7",
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+
+    with requests.Session() as session:
+        # Fetch the login page to get the CSRF token
+        response = session.get(login_page_url, headers=headers)
+        soup = BeautifulSoup(response.text, "html.parser")
+        token = soup.find("input", {"name": "__RequestVerificationToken"}).get(
+            "value", ""
+        )
+
+        # Prepare the form data
+        payload = {
+            "__RequestVerificationToken": token,
+            "RedirectUrl": "/bookings",
+            "username": username,
+            "password": password,
+        }
+
+        # Post login details
+        response = session.post(login_endpoint_url, data=payload, headers=headers)
+
+        # Check if login is successful by examining the response content or URL
+        if response.status_code == 200 and "Log In" not in response.text:
+            with open("bushub_cookie.txt", "w") as cookie_file:
+                for cookie in session.cookies:
+                    cookie_file.write(f"{cookie.name}={cookie.value}\n")
+            print("Login successful and cookies saved!")
+        else:
+            log.error(
+                "🚩 Something went wrong with login request. Please check your credentials and try again."
+            )
+            raise Exception(response.raise_for_status())
 
 
 def get_available_buses(TRAVEL_DATE, LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE):
@@ -274,6 +315,28 @@ def reserve_bus(
     return response
 
 
+# if login_details file exists, read in username and password
+login_details = "login_details.txt"
+if not os.path.exists(login_details):
+    log.error(
+        f"🚩 {login_details} file does not exist. Please create it and add your username and password in the format: username,password"
+    )
+    raise Exception()
+
+with open(login_details) as f:
+    username, password = f.read().strip().split(",")
+login_and_save_cookie(username, password)
+
+# read in cookie file that contains the ; separated string for the BusHub cookie
+# to obtain it, you open the developer tools in your browser, go to the network tab
+# login to https://wellcomegenomecampus.bushub.co.uk/bookings and click on the
+# bookings request, then copy the cookie string from the request headers
+# save its contents into this file
+with open("bushub_cookie.txt") as f:
+    COOKIE = f.read().strip()
+    COOKIE = COOKIE.replace("\n", "; ")
+
+
 # get details of existing bus reservations
 existing_reservations = get_existing_reservations(COOKIE)
 # convert time of reservations to string format for comparing with available reservations
@@ -306,7 +369,8 @@ for TRAVEL_DATE in next_dates:
         # attempt to reserve bus ticket
         # on error (e.g. bus is full), try next bus
         reserved = reserve_bus(
-            bus_time, bus_line, PICKUP_ATCOCODE, DROPOFF_ATCOCODE, COOKIE, ticket_id)
+            bus_time, bus_line, PICKUP_ATCOCODE, DROPOFF_ATCOCODE, COOKIE, ticket_id
+        )
         if reserved:
             if reserved.ok:
                 break  # break to not book multiple buses for same day
