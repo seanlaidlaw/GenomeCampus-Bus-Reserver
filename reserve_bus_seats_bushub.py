@@ -208,7 +208,9 @@ def get_existing_reservations(COOKIE):
     # Find the table with class "table"
     table = soup.find("table", class_="table")
     if not table:
-        log.error(f"🚩 Couldn't find table with existing reservations on usual webpage.")
+        log.error(
+            f"🚩 Couldn't find table with existing reservations on usual webpage. This can happen if there are no reservations at all on the app."
+        )
         raise Exception()
 
     # Initialize an empty list to store dictionaries representing each row
@@ -406,15 +408,17 @@ for TRAVEL_DATE in next_dates:
             )
             raise Exception()
 
+        # these codes can be found by using the chrome app to monitor network traffic when selecting a bus reservation between two stops
+        # in the request that starts with "times?", the preview pane has items, and items in that list will have value lineID
         if PICKUP_ATCOCODE in cc_morning_destinations:
-            LINE_ID = "85336"  # CC route ID
+            LINE_ID = "86624"  # CC route ID
         elif PICKUP_ATCOCODE in nc_morning_destinations:
-            LINE_ID = "86367"  # NC route ID
+            LINE_ID = "86701"  # NC route ID
 
         if DROPOFF_ATCOCODE in cc_evening_destinations:
-            LINE_ID = "85336"  # CC route ID
+            LINE_ID = "86624"  # CC route ID
         elif DROPOFF_ATCOCODE in nc_evening_destinations:
-            LINE_ID = "86367"  # NC evening route ID
+            LINE_ID = "86701"  # NC evening route ID
 
         if not LINE_ID:
             log.error("🚩 could not identify bus route from these stops")
