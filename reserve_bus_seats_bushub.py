@@ -180,6 +180,9 @@ def get_booking_tickets(LINE_ID, COOKIE):
         log.error("🚩 no tickets found for this account")
         raise Exception()
 
+    # filter down array of tickets to only those with remaining activations
+    tickets = [ticket for ticket in tickets if ticket["Activations"]["Remaining"] > 0]
+
     ticket_id = tickets[0]["Details"]["Id"]
     return ticket_id
 
