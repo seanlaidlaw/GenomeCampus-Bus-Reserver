@@ -1,36 +1,36 @@
 days:
   Monday:
     AM:
-      pickup: 0500CCITY022
-      dropoff: BUSHUBd6ZTW0SS
+      pickup: "Centennial Hotel"
+      dropoff: "Campus"
     PM:
-      pickup: BUSHUBd6ZTW0SS
-      dropoff: 0500CCITY035
+      pickup: "Campus"
+      dropoff: "Brooklands Av"
   Tuesday:
     AM:
-      pickup: 0500CCITY022
-      dropoff: BUSHUBd6ZTW0SS
+      pickup: "Centennial Hotel"
+      dropoff: "Campus"
     PM:
-      pickup: BUSHUBd6ZTW0SS
-      dropoff: 0500CCITY261
+      pickup: "Campus"
+      dropoff: "Castle St"
   Wednesday:
     AM:
-      pickup: 0500CCITY275
-      dropoff: BUSHUBd6ZTW0SS
+      pickup: "Castle St"
+      dropoff: "Campus"
     PM:
-      pickup: BUSHUBd6ZTW0SS
-      dropoff: 0500CCITY261
+      pickup: "Campus"
+      dropoff: "Castle St"
   Thursday:
     AM:
-      pickup: 0500CCITY275
-      dropoff: BUSHUBd6ZTW0SS
+      pickup: "Castle St"
+      dropoff: "Campus"
     PM:
-      pickup: BUSHUBd6ZTW0SS
-      dropoff: 0500CCITY035
+      pickup: "Campus"
+      dropoff: "Brooklands Av"
   Friday:
     AM:
-      pickup: 0500CCITY022
-      dropoff: BUSHUBd6ZTW0SS
+      pickup: "Centennial Hotel"
+      dropoff: "Campus"
     PM:
-      pickup: BUSHUBd6ZTW0SS
-      dropoff: 0500CCITY035
+      pickup: "Campus"
+      dropoff: "Brooklands Av"

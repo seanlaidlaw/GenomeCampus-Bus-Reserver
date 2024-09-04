@@ -1,0 +1,38 @@
+CC:
+  AM:
+    Service: "87751"
+    Stops:
+      "St Paul's Rd": "0500CCITY247"
+      "Centennial Hotel": "0500CCITY022"
+      "Mander Way": "0500CCITY236"
+      "Red Cross Ln": "0500CCITY080"
+      "Campus": "BUSHUBd6ZTW0SS"
+  PM:
+    Service: "87751"
+    Stops:
+      "Brooklands Av": "0500CCITY035"
+      "Mander Way": "0500CCITY234"
+      "Red Cross Ln": "0500CCITY081"
+      "St Paul's Rd": "0500CCITY222"
+      "Campus": "BUSHUBd6ZTW0SS"
+NC:
+  AM:
+    Service: "86701"
+    Stops:
+      "Buchan St": "0500CCITY426"
+      "Union Ln": "BUSHUB1fEmCW03"
+      "Westbrooke Centre": "BUSHUBvHONYOgd"
+      "Castle St": "0500CCITY275"
+      "Storey's Way": "0500CCITY054"
+      "Brit' Antarctic Survey": "0500CCITY358"
+      "Campus": "BUSHUBd6ZTW0SS"
+  PM:
+    Service: "86701"
+    Stops:
+      "Brit' Antarctic Survey": "0500CCITY142"
+      "Storey's Way": "BUSHUBYHAuXOEU"
+      "Castle St": "0500CCITY261"
+      "Westbrooke Centre": "0500CCITY107"
+      "Union Ln": "0500CCITY092"
+      "Buchan St": "0500CCITY426"
+      "Campus": "BUSHUBd6ZTW0SS"

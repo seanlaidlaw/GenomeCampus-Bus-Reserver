@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
-import yaml
-import requests
-from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
 import json
 import logging
+import os
+from datetime import datetime, timedelta
 
+import requests
+import yaml
+from bs4 import BeautifulSoup
 
 # configuring the logger to info log levek
 log = logging.getLogger()
@@ -341,8 +341,29 @@ for item in existing_reservations:
 with open("config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
+# Load bus routes and available stops
+# these codes can be found by using the chrome app to monitor network traffic when selecting a bus reservation between two stops
+# in the request that starts with "times?", the preview pane has items, and items in that list will have value lineID
+with open("busroutes.yaml", "r") as file:
+    busroutes = yaml.safe_load(file)
+
 # get string format of every date in next week (bar weekends)
 next_dates = get_upcoming_dates(start_date=None)
+
+
+# Function to find the correct route and stop codes based on labels
+def find_route_and_stop_code(period, pickup_label, dropoff_label):
+    for route_code, route_data in busroutes.items():
+        if period in route_data:
+            bus_service_data = route_data[period]
+
+            pickup_code = bus_service_data["Stops"].get(pickup_label)
+            dropoff_code = bus_service_data["Stops"].get(dropoff_label)
+
+            if pickup_code and dropoff_code:
+                return bus_service_data["Service"], pickup_code, dropoff_code
+    return None, None, None
+
 
 for TRAVEL_DATE in next_dates:
     dateISO = datetime.strptime(TRAVEL_DATE, "%Y-%m-%d").date()
@@ -354,74 +375,25 @@ for TRAVEL_DATE in next_dates:
         continue
 
     for period in ["AM", "PM"]:
-        PICKUP_ATCOCODE, DROPOFF_ATCOCODE = None, None
-        if "pickup" in config["days"][day_name]:
-            PICKUP_ATCOCODE = config["days"][day_name]["pickup"]
-        if period in config["days"][day_name]:
-            PICKUP_ATCOCODE = config["days"][day_name][period]["pickup"]
+        LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE = None, None, None
+        bus_service = None
 
-        if "dropoff" in config["days"][day_name]:
-            DROPOFF_ATCOCODE = config["days"][day_name]["dropoff"]
         if period in config["days"][day_name]:
-            DROPOFF_ATCOCODE = config["days"][day_name][period]["dropoff"]
+            pickup_label = config["days"][day_name][period].get("pickup")
+            dropoff_label = config["days"][day_name][period].get("dropoff")
 
+            if pickup_label and dropoff_label:
+                # Find the service and stop codes from busroutes.yaml
+                LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE = find_route_and_stop_code(
+                    period, pickup_label, dropoff_label
+                )
+
+        # If either pickup or dropoff codes are missing, skip this period
         if PICKUP_ATCOCODE is None or DROPOFF_ATCOCODE is None:
-            log.info(f"⛔ No configuration for {day_name} {period}. Skipping...")
-            continue
-
-        # each combination of bus stops has its own route ID for NC/CC/EC etc.
-        LINE_ID = None
-        cc_morning_destinations = [
-            "0500CCITY080",
-            "0500CCITY236",
-            "0500CCITY022",
-            "0500CCITY247",
-        ]
-        nc_morning_destinations = [
-            "0500CCITY054",
-            "0500CCITY358",
-            "0500CCITY275",
-            "BUSHUBvHONYOgd",
-            "0500CCITY426",
-        ]
-        cc_evening_destinations = [
-            "0500CCITY081",
-            "0500CCITY234",
-            "0500CCITY035",
-            "0500CCITY222",
-        ]
-        nc_evening_destinations = [
-            "0500CCITY142",
-            "BUSHUBYHAuXOEU",
-            "0500CCITY261",
-            "0500CCITY107",
-            "0500CCITY092",
-            "0500CCITY140",
-            "0500CCITY338",
-            "0500CCITY426",
-        ]
-        valid_destination_ids = ["BUSHUBd6ZTW0SS"]  # Campus
-        valid_destination_ids += cc_evening_destinations
-        valid_destination_ids += nc_evening_destinations
-
-        if DROPOFF_ATCOCODE not in valid_destination_ids:
-            log.error(
-                "🚩 specified ID for drop-off is not a valid drop-off ID. You specified: "
-                + DROPOFF_ATCOCODE
+            log.info(
+                f"⛔ No valid configuration for {day_name} {period}. Check spelling on stop names. Skipping..."
             )
-            raise Exception()
-
-        # these codes can be found by using the chrome app to monitor network traffic when selecting a bus reservation between two stops
-        # in the request that starts with "times?", the preview pane has items, and items in that list will have value lineID
-        if PICKUP_ATCOCODE in cc_morning_destinations:
-            LINE_ID = "86624"  # CC route ID
-        elif PICKUP_ATCOCODE in nc_morning_destinations:
-            LINE_ID = "86701"  # NC route ID
-
-        if DROPOFF_ATCOCODE in cc_evening_destinations:
-            LINE_ID = "86624"  # CC route ID
-        elif DROPOFF_ATCOCODE in nc_evening_destinations:
-            LINE_ID = "86701"  # NC evening route ID
+            continue
 
         if not LINE_ID:
             log.error("🚩 could not identify bus route from these stops")

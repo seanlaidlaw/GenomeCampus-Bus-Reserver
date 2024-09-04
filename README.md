@@ -18,42 +18,35 @@ Automate Genome Campus bus reservations based on a given schedule using the
    The file should be of format (without the quotes): "email,password"
 1. Modify the `config.yaml` from the defaults provided in root directory of the
    repository.
-1. Define your pickup and dropoff codes for each day of the week in the
+1. Define your pickup and dropoff labels for each day of the week in the
    following format:
 
 ```{yaml}
 days:
     Monday:
         AM:
-            pickup: YOUR_PICKUP_CODE_HERE
-            dropoff: YOUR_DROPOFF_CODE_HERE
+            pickup: "Your Pickup Stop Label Here"
+            dropoff: "Your Dropoff Stop Label Here"
         PM:
-            pickup: YOUR_PICKUP_CODE_HERE
-            dropoff: YOUR_DROPOFF_CODE_HERE
+            pickup: "Your Pickup Stop Label Here"
+            dropoff: "Your Dropoff Stop Label Here"
     Tuesday:
         AM:
-            pickup: YOUR_PICKUP_CODE_HERE
-            dropoff: YOUR_DROPOFF_CODE_HERE
+            pickup: "Your Pickup Stop Label Here"
+            dropoff: "Your Dropoff Stop Label Here"
         PM:
-            pickup: YOUR_PICKUP_CODE_HERE
-            dropoff: YOUR_DROPOFF_CODE_HERE
+            pickup: "Your Pickup Stop Label Here"
+            dropoff: "Your Dropoff Stop Label Here"
     ...
 ```
+Replace "Your Pickup Stop Label Here" and "Your Dropoff Stop Label Here" with the
+appropriate stop names. Do not use stop IDs directly; instead, use the stop labels
+as defined in the bus routes (e.g., "St Paul's Rd", "Centennial Hotel").
 
-Replace `YOUR_PICKUP_CODE_HERE` and `YOUR_DROPOFF_CODE_HERE` with the
-appropriate codes for each stop.
+The script will automatically look up the corresponding stop IDs and service numbers
+based on the labels you provide in the config.yaml, using the busroutes.yaml lookup file.
+To get the stop names, look inside the busroutes.yaml file.
 
-| CC Bus Stops            |       Stop IDs |
-| :---------------------- | -------------: |
-| St Paul's Rd - S        |   0500CCITY247 |
-| Centennial Hotel - S    |   0500CCITY022 |
-| Mander Way - S          |   0500CCITY236 |
-| Opp Red Cross Lane - E  |   0500CCITY080 |
-| Wellcome Genome Campus  | BUSHUBd6ZTW0SS |
-| Red Cross Lane - W (RQ) |   0500CCITY081 |
-| Mander Way - N (RQ)     |   0500CCITY234 |
-| Botanic Gdns - N (RQ)   |   0500CCITY035 |
-| St Paul's Rd - N (RQ)   |   0500CCITY222 |
 
 ### Usage
 
@@ -61,5 +54,5 @@ appropriate codes for each stop.
 
    `python reserve_bus_seats_bushub.py`
 
-2. The script will automatically book buses based on the configuration provided
-   in `config.yaml`.
+2. The script will automatically book buses based on the configuration provided in config.yaml.
+The stop codes and bus service numbers will be looked up dynamically from the busroutes.yaml based on the stop labels you define.
