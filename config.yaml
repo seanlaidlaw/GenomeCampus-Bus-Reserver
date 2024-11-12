@@ -12,17 +12,17 @@ days:
       dropoff: "Campus"
     PM:
       pickup: "Campus"
-      dropoff: "Castle St"
+      dropoff: "Brooklands Av"
   Wednesday:
     AM:
-      pickup: "Castle St"
+      pickup: "Centennial Hotel"
       dropoff: "Campus"
     PM:
       pickup: "Campus"
-      dropoff: "Castle St"
+      dropoff: "Brooklands Av"
   Thursday:
     AM:
-      pickup: "Castle St"
+      pickup: "Centennial Hotel"
       dropoff: "Campus"
     PM:
       pickup: "Campus"

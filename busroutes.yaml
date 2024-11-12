@@ -1,6 +1,6 @@
 CC:
   AM:
-    Service: "87751"
+    Service: "88399"
     Stops:
       "St Paul's Rd": "0500CCITY247"
       "Centennial Hotel": "0500CCITY022"
@@ -8,7 +8,7 @@ CC:
       "Red Cross Ln": "0500CCITY080"
       "Campus": "BUSHUBd6ZTW0SS"
   PM:
-    Service: "87751"
+    Service: "88399"
     Stops:
       "Brooklands Av": "0500CCITY035"
       "Mander Way": "0500CCITY234"
@@ -17,7 +17,7 @@ CC:
       "Campus": "BUSHUBd6ZTW0SS"
 NC:
   AM:
-    Service: "86701"
+    Service: "88420"
     Stops:
       "Buchan St": "0500CCITY426"
       "Union Ln": "BUSHUB1fEmCW03"
@@ -27,7 +27,7 @@ NC:
       "Brit' Antarctic Survey": "0500CCITY358"
       "Campus": "BUSHUBd6ZTW0SS"
   PM:
-    Service: "86701"
+    Service: "88420"
     Stops:
       "Brit' Antarctic Survey": "0500CCITY142"
       "Storey's Way": "BUSHUBYHAuXOEU"
