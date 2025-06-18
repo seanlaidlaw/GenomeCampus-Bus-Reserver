@@ -1,36 +1,36 @@
 days:
   Monday:
     AM:
-      pickup: "Centennial Hotel"
-      dropoff: "Campus"
+      pickup: "Centennial Hotel - S"
+      dropoff: "Wellcome Genome Campus"
     PM:
-      pickup: "Campus"
-      dropoff: "Brooklands Av"
+      pickup: "Wellcome Genome Campus"
+      dropoff: "Brooklands Av - N (RQ)"
   Tuesday:
     AM:
-      pickup: "Centennial Hotel"
-      dropoff: "Campus"
+      pickup: "Centennial Hotel - S"
+      dropoff: "Wellcome Genome Campus"
     PM:
-      pickup: "Campus"
-      dropoff: "Brooklands Av"
+      pickup: "Wellcome Genome Campus"
+      dropoff: "Brooklands Av - N (RQ)"
   Wednesday:
     AM:
-      pickup: "Centennial Hotel"
-      dropoff: "Campus"
+      pickup: "Centennial Hotel - S"
+      dropoff: "Wellcome Genome Campus"
     PM:
-      pickup: "Campus"
-      dropoff: "Brooklands Av"
+      pickup: "Wellcome Genome Campus"
+      dropoff: "Brooklands Av - N (RQ)"
   Thursday:
     AM:
-      pickup: "Centennial Hotel"
-      dropoff: "Campus"
+      pickup: "Centennial Hotel - S"
+      dropoff: "Wellcome Genome Campus"
     PM:
-      pickup: "Campus"
-      dropoff: "Brooklands Av"
+      pickup: "Wellcome Genome Campus"
+      dropoff: "Brooklands Av - N (RQ)"
   Friday:
     AM:
-      pickup: "Centennial Hotel"
-      dropoff: "Campus"
+      pickup: "Centennial Hotel - S"
+      dropoff: "Wellcome Genome Campus"
     PM:
-      pickup: "Campus"
-      dropoff: "Brooklands Av"
+      pickup: "Wellcome Genome Campus"
+      dropoff: "Brooklands Av - N (RQ)"

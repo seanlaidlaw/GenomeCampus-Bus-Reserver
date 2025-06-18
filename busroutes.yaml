@@ -1,38 +1,95 @@
 CC:
   AM:
-    Service: "88399"
+    Service: '90606'
     Stops:
-      "St Paul's Rd": "0500CCITY247"
-      "Centennial Hotel": "0500CCITY022"
-      "Mander Way": "0500CCITY236"
-      "Red Cross Ln": "0500CCITY080"
-      "Campus": "BUSHUBd6ZTW0SS"
+      St Paul's Rd - S: 0500CCITY247
+      Centennial Hotel - S: 0500CCITY022
+      Mowbray Rd - E: 0500CCITY282
+      Greystoke Rd - E: 0500CCITY258
+      Red Cross Ln -  E: 0500CCITY080
+      Wellcome Genome Campus: BUSHUBd6ZTW0SS
   PM:
-    Service: "88399"
+    Service: '90606'
     Stops:
-      "Brooklands Av": "0500CCITY035"
-      "Mander Way": "0500CCITY234"
-      "Red Cross Ln": "0500CCITY081"
-      "St Paul's Rd": "0500CCITY222"
-      "Campus": "BUSHUBd6ZTW0SS"
+      Wellcome Genome Campus: BUSHUBd6ZTW0SS
+      Red Cross Ln - W (RQ): 0500CCITY081
+      Greystoke Rd - W (RQ): 0500CCITY278
+      Mowbray Rd - W (RQ): 0500CCITY272
+      Brooklands Av - N (RQ): 0500CCITY035
+      St Paul's Rd - N (RQ): 0500CCITY222
+      Castle St - E (RQ): 0500CCITY261
+      Union Ln - N (RQ): 0500CCITY092
+      Kendal Way - N (RQ): 0500CCITY140
+      CRC - W (RQ): 0500CCITY338
+      Buchan St Roundabout: 0500CCITY426
+EC:
+  AM:
+    Service: '90607'
+    Stops:
+      River Lane - E: 0500CCITY166
+      CUFC, Ditton Walk - E: 0500CCITY191
+      Peverel Rd - S: 0500CCITY048
+      Sainsbury's (nr bridge) - E: 0500CCITY040
+      St Andrew's Ch - NE: BUSHUBnKmx51dj
+      Tamarin Gardens: 0500STEVE002
+      C'bridge Rd - E: 0500SFULB006
+      Wellcome Genome Campus: BUSHUBd6ZTW0SS
+  PM:
+    Service: '90607'
+    Stops:
+      Wellcome Genome Campus: BUSHUBd6ZTW0SS
+      C'bridge Rd - W (RQ): 0500SFULB010
+      Tamarin Gardens: 0500STEVE010
+      St Andrew's Ch. (opp) - N (RQ): 0500CCITY341
+      Sainsbury's (nr bridge) - W (RQ): 0500CCITY098
+      Peverel Rd - N: 0500CCITY281
+      CUFC, Ditton Walk - W (RQ): 0500CCITY213
+      Retail Park - W (RQ): 0500CCITY482
 NC:
   AM:
-    Service: "88420"
+    Service: '88420'
     Stops:
-      "Buchan St": "0500CCITY426"
-      "Union Ln": "BUSHUB1fEmCW03"
-      "Westbrooke Centre": "BUSHUBvHONYOgd"
-      "Castle St": "0500CCITY275"
-      "Storey's Way": "0500CCITY054"
-      "Brit' Antarctic Survey": "0500CCITY358"
-      "Campus": "BUSHUBd6ZTW0SS"
+      Buchan St Roundabout: 0500CCITY426
+      CRC, Kings Hedges Rd - E: BUSHUBrbffbHvy
+      Kendal Way - S: 0500CCITY152
+      Union Ln - S: BUSHUB1fEmCW03
+      Westbrooke Centre - S: BUSHUBvHONYOgd
+      Castle St - W: 0500CCITY275
+      Storey's Way - W: 0500CCITY054
+      Brit' Antarctic Survey - W: 0500CCITY358
+      Wellcome Genome Campus: BUSHUBd6ZTW0SS
   PM:
-    Service: "88420"
+    Service: '88420'
     Stops:
-      "Brit' Antarctic Survey": "0500CCITY142"
-      "Storey's Way": "BUSHUBYHAuXOEU"
-      "Castle St": "0500CCITY261"
-      "Westbrooke Centre": "0500CCITY107"
-      "Union Ln": "0500CCITY092"
-      "Buchan St": "0500CCITY426"
-      "Campus": "BUSHUBd6ZTW0SS"
+      Wellcome Genome Campus: BUSHUBd6ZTW0SS
+      Brit' Antarctic Survey - E (RQ): 0500CCITY142
+      Storey's Way - E (RQ): BUSHUBYHAuXOEU
+      Castle St - E (RQ): 0500CCITY261
+      Westbrooke Centre - N (RQ): 0500CCITY107
+      Union Ln - N (RQ): 0500CCITY092
+      Kendal Way - N (RQ): 0500CCITY140
+      CRC - W (RQ): 0500CCITY338
+      Buchan St Roundabout: 0500CCITY426
+SC:
+  AM:
+    Service: '88629'
+    Stops:
+      G'chester Rd Stop - E: 0500CCITY163
+      Gazeley Rd - S: 0500CCITY292
+      Anstey Way - S: 0500CCITY076
+      Bishop's Rd - SE: 0500CCITY378
+      Maris Green - S: 0500SGRED003
+      Wollards Ln - S: 0500SGRED019
+      Church St - S: 0500SSTAP016
+      Wellcome Genome Campus: BUSHUBd6ZTW0SS
+  PM:
+    Service: '88629'
+    Stops:
+      Wellcome Genome Campus: BUSHUBd6ZTW0SS
+      Church St - N (RQ): 0500SSTAP017
+      Wollards Ln - N (RQ): 0500SGRED014
+      Maris Green - N (RQ): 0500SGRED002
+      Bishop's Rd - N (RQ): 0500CCITY011
+      Anstey Way - N (RQ): 0500CCITY077
+      Gazeley Rd -  N (RQ): 0500CCITY178
+      G'chester Rd Stop - W (RQ): 0500CCITY194

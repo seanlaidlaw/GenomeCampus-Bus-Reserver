@@ -87,6 +87,165 @@ def login_and_save_cookie(username, password):
             )
             raise Exception(response.raise_for_status())
 
+def get_bus_stops(COOKIE):
+    """
+    Fetches bus stop information from the BusHub API.
+    Returns a dictionary mapping bus route numbers to their stops.
+    """
+    url = "https://nextstopapp.bushub.co.uk/api/v1.0/service/region/490"
+
+    # Get next weekday date in ISO format for the query parameter
+    current_date = datetime.now()
+    next_weekday = current_date + timedelta(days=1)
+    while next_weekday.weekday() >= 5:  # Skip weekends (5=Saturday, 6=Sunday)
+        next_weekday += timedelta(days=1)
+
+    current_date = next_weekday.isoformat()
+
+    headers = {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "cookie": COOKIE,
+        "origin": "https://wellcomegenomecampus.bushub.co.uk",
+        "referer": "https://wellcomegenomecampus.bushub.co.uk/booking/create",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
+        "x-requested-with": "XMLHttpRequest"
+    }
+
+    params = {
+        "date": current_date,
+        "includeRunBy": "true",
+        "canBook": "true"
+    }
+
+    response = requests.get(url, headers=headers, params=params)
+    if not response.ok:
+        log.error("🚩 Failed to fetch bus stop information")
+        log.error(response.text)
+        raise Exception(response.raise_for_status())
+
+    data = response.json()
+    bus_routes = []
+
+    for item in data["items"]:
+        if 'lineId' not in item:
+            log.error("🚩 No lineId found for bus route")
+            continue
+
+        # Create separate services for AM and PM directions
+        am_service = {
+            "Service": item['lineId'],
+            "name": item.get("name"),
+            "direction": "AM",
+            "stops": []
+        }
+
+        pm_service = {
+            "Service": item['lineId'],
+            "name": item.get("name"),
+            "direction": "PM",
+            "stops": []
+        }
+
+        if "journeyPatterns" in item:
+            for pattern in item["journeyPatterns"]:
+                if "busHubRouteRefs" in pattern and pattern["busHubRouteRefs"]:
+                    # Extract stops from journey patterns
+                    for stop in pattern["journeyPatterns"]:
+                        if "atcoCode" in stop and "name" in stop:
+                            stop_info = {
+                                "atcoCode": stop["atcoCode"],
+                                "name": stop["name"]
+                            }
+
+                            # Assign stop to appropriate direction service
+                            if "direction" in stop:
+                                if stop["direction"] == 2:
+                                    am_service["stops"].append(stop_info)
+                                elif stop["direction"] == 1:
+                                    pm_service["stops"].append(stop_info)
+                            else:
+                                # If no direction field, add to both (fallback)
+                                am_service["stops"].append(stop_info)
+                                pm_service["stops"].append(stop_info)
+
+        # Only add services that have stops
+        if am_service["stops"]:
+            bus_routes.append(am_service)
+        if pm_service["stops"]:
+            bus_routes.append(pm_service)
+
+    return bus_routes
+
+
+def generate_busroutes_yaml(bus_stops_data, existing_config=None):
+    """
+    Generate busroutes.yaml structure from bus stops data.
+    Preserves existing route mappings if available.
+    """
+    if existing_config is None:
+        existing_config = {}
+
+    # Create a mapping of service IDs to route codes and periods
+    service_to_route_mapping = {}
+
+    # Extract existing mappings to preserve them
+    for route_code, route_data in existing_config.items():
+        for period in ["AM", "PM"]:
+            if period in route_data:
+                service_id = route_data[period]["Service"]
+                service_to_route_mapping[service_id] = {
+                    "route_code": route_code,
+                    "period": period
+                }
+
+    # Generate new structure
+    new_routes = {}
+
+    # Process each service from the bus_stops_data list
+    for service_data in bus_stops_data:
+        service_id = service_data["Service"]
+        direction = service_data["direction"]
+        route_name = service_data["name"]
+
+        # Check if this service already has a mapping
+        if service_id in service_to_route_mapping:
+            mapping = service_to_route_mapping[service_id]
+            route_code = mapping["route_code"]
+            period = mapping["period"]
+        else:
+            # Use the route name from the API data
+            route_code = route_name
+            period = direction
+
+        # Initialize route structure if needed
+        if route_code not in new_routes:
+            new_routes[route_code] = {}
+
+        if period not in new_routes[route_code]:
+            new_routes[route_code][period] = {
+                "Service": str(service_id),
+                "Stops": {}
+            }
+
+        # Add all stops for this service
+        for stop in service_data["stops"]:
+            new_routes[route_code][period]["Stops"][stop["name"]] = stop["atcoCode"]
+
+    return new_routes
+
+
+def save_busroutes_yaml(bus_routes_data, filename="busroutes.yaml"):
+    """
+    Save the bus routes data to a YAML file.
+    """
+    try:
+        with open(filename, "w") as file:
+            yaml.dump(bus_routes_data, file, default_flow_style=False, sort_keys=False)
+        log.info(f"✅ Successfully saved bus routes to {filename}")
+    except Exception as e:
+        log.error(f"🚩 Failed to save bus routes to {filename}: {e}")
+        raise
 
 def get_available_buses(TRAVEL_DATE, LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE):
     url_get_buses = f"https://nextstopapp.bushub.co.uk/api/v1.0/service/{LINE_ID}/bookings/times?date={TRAVEL_DATE}&pickupAtcocode={PICKUP_ATCOCODE}&dropoffAtcocode={DROPOFF_ATCOCODE}"
@@ -320,6 +479,27 @@ with open("bushub_cookie.txt") as f:
     COOKIE = f.read().strip()
     COOKIE = COOKIE.replace("\n", "; ")
 
+# Dynamically update busroutes.yaml with latest bus stop information
+log.info("🔄 Fetching latest bus stop information...")
+try:
+    # Load existing busroutes.yaml if it exists
+    existing_busroutes = {}
+    if os.path.exists("busroutes.yaml"):
+        with open("busroutes.yaml", "r") as file:
+            existing_busroutes = yaml.safe_load(file) or {}
+
+    # Get current bus stops from API
+    current_bus_stops = get_bus_stops(COOKIE)
+
+    # Generate new busroutes structure
+    updated_busroutes = generate_busroutes_yaml(current_bus_stops, existing_busroutes)
+
+    # Save updated busroutes.yaml
+    save_busroutes_yaml(updated_busroutes)
+
+except Exception as e:
+    log.warning(f"⚠️ Failed to update busroutes.yaml dynamically: {e}")
+    log.info("📝 Continuing with existing busroutes.yaml file...")
 
 # get details of existing bus reservations
 existing_reservations = get_existing_reservations(COOKIE)
