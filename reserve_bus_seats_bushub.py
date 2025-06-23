@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import argparse
 import json
 import logging
 import os
+import re
+import time
 from datetime import datetime, timedelta
 
 import requests
@@ -87,6 +90,7 @@ def login_and_save_cookie(username, password):
             )
             raise Exception(response.raise_for_status())
 
+
 def get_bus_stops(COOKIE):
     """
     Fetches bus stop information from the BusHub API.
@@ -109,14 +113,10 @@ def get_bus_stops(COOKIE):
         "origin": "https://wellcomegenomecampus.bushub.co.uk",
         "referer": "https://wellcomegenomecampus.bushub.co.uk/booking/create",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
-        "x-requested-with": "XMLHttpRequest"
+        "x-requested-with": "XMLHttpRequest",
     }
 
-    params = {
-        "date": current_date,
-        "includeRunBy": "true",
-        "canBook": "true"
-    }
+    params = {"date": current_date, "includeRunBy": "true", "canBook": "true"}
 
     response = requests.get(url, headers=headers, params=params)
     if not response.ok:
@@ -128,23 +128,23 @@ def get_bus_stops(COOKIE):
     bus_routes = []
 
     for item in data["items"]:
-        if 'lineId' not in item:
+        if "lineId" not in item:
             log.error("🚩 No lineId found for bus route")
             continue
 
         # Create separate services for AM and PM directions
         am_service = {
-            "Service": item['lineId'],
+            "Service": item["lineId"],
             "name": item.get("name"),
             "direction": "AM",
-            "stops": []
+            "stops": [],
         }
 
         pm_service = {
-            "Service": item['lineId'],
+            "Service": item["lineId"],
             "name": item.get("name"),
             "direction": "PM",
-            "stops": []
+            "stops": [],
         }
 
         if "journeyPatterns" in item:
@@ -155,7 +155,7 @@ def get_bus_stops(COOKIE):
                         if "atcoCode" in stop and "name" in stop:
                             stop_info = {
                                 "atcoCode": stop["atcoCode"],
-                                "name": stop["name"]
+                                "name": stop["name"],
                             }
 
                             # Assign stop to appropriate direction service
@@ -196,7 +196,7 @@ def generate_busroutes_yaml(bus_stops_data, existing_config=None):
                 service_id = route_data[period]["Service"]
                 service_to_route_mapping[service_id] = {
                     "route_code": route_code,
-                    "period": period
+                    "period": period,
                 }
 
     # Generate new structure
@@ -223,10 +223,7 @@ def generate_busroutes_yaml(bus_stops_data, existing_config=None):
             new_routes[route_code] = {}
 
         if period not in new_routes[route_code]:
-            new_routes[route_code][period] = {
-                "Service": str(service_id),
-                "Stops": {}
-            }
+            new_routes[route_code][period] = {"Service": str(service_id), "Stops": {}}
 
         # Add all stops for this service
         for stop in service_data["stops"]:
@@ -246,6 +243,7 @@ def save_busroutes_yaml(bus_routes_data, filename="busroutes.yaml"):
     except Exception as e:
         log.error(f"🚩 Failed to save bus routes to {filename}: {e}")
         raise
+
 
 def get_available_buses(TRAVEL_DATE, LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE):
     url_get_buses = f"https://nextstopapp.bushub.co.uk/api/v1.0/service/{LINE_ID}/bookings/times?date={TRAVEL_DATE}&pickupAtcocode={PICKUP_ATCOCODE}&dropoffAtcocode={DROPOFF_ATCOCODE}"
@@ -406,6 +404,15 @@ def get_existing_reservations(COOKIE):
             row_data["datetimeISO"], "%Y-%m-%dT%H:%M:%S"
         ).date()
 
+        # pull out the cancellation ID
+        cancel_form = row.find("form", action=re.compile(r"/booking/cancel/\d+"))
+        if cancel_form:
+            action = cancel_form["action"]
+            m = re.search(r"/booking/cancel/(\d+)", action)
+            row_data["cancel_id"] = m.group(1) if m else None
+        else:
+            row_data["cancel_id"] = None
+
         # Append the row data dictionary to the table_data list
         table_data.append(row_data)
 
@@ -458,81 +465,8 @@ def reserve_bus(
     return response
 
 
-# if login_details file exists, read in username and password
-login_details = "login_details.txt"
-if not os.path.exists(login_details):
-    log.error(
-        f"🚩 {login_details} file does not exist. Please create it and add your username and password in the format: username,password"
-    )
-    raise Exception()
-
-with open(login_details) as f:
-    username, password = f.read().strip().split(",")
-login_and_save_cookie(username, password)
-
-# read in cookie file that contains the ; separated string for the BusHub cookie
-# to obtain it, you open the developer tools in your browser, go to the network tab
-# login to https://wellcomegenomecampus.bushub.co.uk/bookings and click on the
-# bookings request, then copy the cookie string from the request headers
-# save its contents into this file
-with open("bushub_cookie.txt") as f:
-    COOKIE = f.read().strip()
-    COOKIE = COOKIE.replace("\n", "; ")
-
-# Dynamically update busroutes.yaml with latest bus stop information
-log.info("🔄 Fetching latest bus stop information...")
-try:
-    # Load existing busroutes.yaml if it exists
-    existing_busroutes = {}
-    if os.path.exists("busroutes.yaml"):
-        with open("busroutes.yaml", "r") as file:
-            existing_busroutes = yaml.safe_load(file) or {}
-
-    # Get current bus stops from API
-    current_bus_stops = get_bus_stops(COOKIE)
-
-    # Generate new busroutes structure
-    updated_busroutes = generate_busroutes_yaml(current_bus_stops, existing_busroutes)
-
-    # Save updated busroutes.yaml
-    save_busroutes_yaml(updated_busroutes)
-
-except Exception as e:
-    log.warning(f"⚠️ Failed to update busroutes.yaml dynamically: {e}")
-    log.info("📝 Continuing with existing busroutes.yaml file...")
-
-# get details of existing bus reservations
-existing_reservations = get_existing_reservations(COOKIE)
-# convert time of reservations to string format for comparing with available reservations
-# split into two lists one for morning and one for evening so we can check if we
-# have already booked a bus for that part of day
-existing_reserved_mornings = []
-existing_reserved_evenings = []
-for item in existing_reservations:
-    if item[""] != "Cancelled":
-        # if the datetime is before noon
-        if datetime.strptime(item["datetimeISO"], "%Y-%m-%dT%H:%M:%S").hour < 12:
-            existing_reserved_mornings.append(item["dateISO"].strftime("%Y-%m-%d"))
-        else:
-            existing_reserved_evenings.append(item["dateISO"].strftime("%Y-%m-%d"))
-
-
-# Load configuration from YAML file
-with open("config.yaml", "r") as file:
-    config = yaml.safe_load(file)
-
-# Load bus routes and available stops
-# these codes can be found by using the chrome app to monitor network traffic when selecting a bus reservation between two stops
-# in the request that starts with "times?", the preview pane has items, and items in that list will have value lineID
-with open("busroutes.yaml", "r") as file:
-    busroutes = yaml.safe_load(file)
-
-# get string format of every date in next week (bar weekends)
-next_dates = get_upcoming_dates(start_date=None)
-
-
 # Function to find the correct route and stop codes based on labels
-def find_route_and_stop_code(period, pickup_label, dropoff_label):
+def find_route_and_stop_code(period, pickup_label, dropoff_label, busroutes):
     for route_code, route_data in busroutes.items():
         if period in route_data:
             bus_service_data = route_data[period]
@@ -545,68 +479,398 @@ def find_route_and_stop_code(period, pickup_label, dropoff_label):
     return None, None, None
 
 
-for TRAVEL_DATE in next_dates:
-    dateISO = datetime.strptime(TRAVEL_DATE, "%Y-%m-%d").date()
-    day_name = dateISO.strftime("%A")  # Get day name like Monday, Tuesday, etc.
+def get_today_pm_route_info(config, busroutes):
+    """
+    Get the PM route information for today's configuration.
+    Returns (LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE) or (None, None, None) if not found.
+    """
+    today = datetime.now()
+    day_name = today.strftime("%A")  # Get day name like Monday, Tuesday, etc.
 
     # Skip if day not in config
     if day_name not in config["days"]:
-        log.info(f"⛔ No configuration for {day_name}. Skipping...")
-        continue
+        log.info(f"⛔ No configuration for {day_name}.")
+        return None, None, None
 
-    for period in ["AM", "PM"]:
-        LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE = None, None, None
-        bus_service = None
+    # Check if PM period exists for today
+    if "PM" not in config["days"][day_name]:
+        log.info(f"⛔ No PM configuration for {day_name}.")
+        return None, None, None
 
-        if period in config["days"][day_name]:
-            pickup_label = config["days"][day_name][period].get("pickup")
-            dropoff_label = config["days"][day_name][period].get("dropoff")
+    pickup_label = config["days"][day_name]["PM"].get("pickup")
+    dropoff_label = config["days"][day_name]["PM"].get("dropoff")
 
-            if pickup_label and dropoff_label:
-                # Find the service and stop codes from busroutes.yaml
-                LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE = find_route_and_stop_code(
-                    period, pickup_label, dropoff_label
+    if not pickup_label or not dropoff_label:
+        log.info(
+            f"⛔ No valid PM configuration for {day_name}. Check spelling on stop names."
+        )
+        return None, None, None
+
+    # Find the service and stop codes from busroutes.yaml
+    LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE = find_route_and_stop_code(
+        "PM", pickup_label, dropoff_label, busroutes
+    )
+
+    if PICKUP_ATCOCODE is None or DROPOFF_ATCOCODE is None:
+        log.info(f"⛔ Could not find stop codes for PM route on {day_name}.")
+        return None, None, None
+
+    if not LINE_ID:
+        log.error("🚩 could not identify bus route from these stops")
+        return None, None, None
+
+    return LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE
+
+
+def monitor_and_book_pm_bus(config, busroutes, COOKIE, check_interval=30):
+    """
+    Continuously monitor for PM bus availability and book as soon as it becomes available.
+    """
+    log.info("🏠 Starting home-soon mode - monitoring for PM bus availability...")
+
+    while True:
+        try:
+            # Get today's PM route info
+            LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE = get_today_pm_route_info(
+                config, busroutes
+            )
+
+            if not LINE_ID:
+                log.info("⛔ No PM route configured for today. Waiting...")
+                time.sleep(check_interval)
+                continue
+
+            today = datetime.now()
+            today_str = today.strftime("%Y-%m-%d")
+
+            # Check if we already have a PM reservation for today
+            existing_reservations = get_existing_reservations(COOKIE)
+            existing_reserved_evenings = {}
+            for item in existing_reservations:
+                if item[""] != "Cancelled":
+                    if (
+                        datetime.strptime(item["datetimeISO"], "%Y-%m-%dT%H:%M:%S").hour
+                        >= 12
+                    ):
+                        date_key = item["dateISO"].strftime("%Y-%m-%d")
+                        existing_reserved_evenings[date_key] = item["datetimeISO"]
+
+            # Check for available buses
+            try:
+                available_buses = get_available_buses(
+                    today_str, LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE
                 )
 
-        # If either pickup or dropoff codes are missing, skip this period
-        if PICKUP_ATCOCODE is None or DROPOFF_ATCOCODE is None:
-            log.info(
-                f"⛔ No valid configuration for {day_name} {period}. Check spelling on stop names. Skipping..."
-            )
-            continue
+                if not available_buses:
+                    log.info(
+                        "⛔ No PM buses available yet. Checking again in {} seconds...".format(
+                            check_interval
+                        )
+                    )
+                    time.sleep(check_interval)
+                    continue
 
-        if not LINE_ID:
-            log.error("🚩 could not identify bus route from these stops")
-            raise Exception()
+                # Check if there are any buses that are earlier than our existing reservations
+                earlier_buses = []
+                for bus in available_buses:
+                    bus_datetime = bus["scheduledDepartureTime"]
+                    bus_date = datetime.fromisoformat(bus_datetime).strftime("%Y-%m-%d")
+                    bus_time = datetime.fromisoformat(bus_datetime)
+                    if (
+                        bus_date in existing_reserved_evenings
+                        and bus_time
+                        < datetime.fromisoformat(existing_reserved_evenings[bus_date])
+                    ):
+                        earlier_buses.append(bus)
 
-        existing_reservations_period = (
-            existing_reserved_mornings if period == "AM" else existing_reserved_evenings
-        )
-        if TRAVEL_DATE in existing_reservations_period:
-            log.info(f"🚌 Bus already booked for {TRAVEL_DATE}.")
-            continue
+                # if no earlier buses yet, then skip to next iteration of while loop
+                if not earlier_buses:
+                    log.info(
+                        "⏳ Already on earliest available bus. Checking again in {} seconds...".format(
+                            check_interval
+                        )
+                    )
+                    time.sleep(check_interval)
+                    continue
 
-        # get list of buses with available seats on the desired date
-        available_buses = get_available_buses(
-            TRAVEL_DATE, LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE
-        )
+                # sort earlier_buses by scheduledDepartureTime
+                earlier_buses.sort(key=lambda x: x["scheduledDepartureTime"])
 
-        # attempt booking bus ticket in order of latest departure time
-        for item in available_buses:
-            # get bus departure time and id of bus route (line id)
-            bus_time = item["scheduledDepartureTime"]
-            bus_line = item["lineId"]
+                # if we have earlier buses, then book the latest one
+                for bus in earlier_buses:
+                    bus_time = bus["scheduledDepartureTime"]
+                    bus_line = bus["lineId"]
 
-            # get id of currently owned ticket
-            ticket_id = get_booking_tickets(bus_line, COOKIE)
+                    # get PM reservation for today
+                    today_existing_reservations = [
+                        reservation
+                        for reservation in existing_reservations
+                        if reservation["dateISO"].strftime("%Y-%m-%d") == today_str
+                    ]
+                    today_existing_reservations.sort(
+                        key=lambda x: x["datetimeISO"], reverse=True
+                    )
 
-            # attempt to reserve bus ticket
-            # on error (e.g. bus is full), try next bus
-            reserved = reserve_bus(
-                bus_time, bus_line, PICKUP_ATCOCODE, DROPOFF_ATCOCODE, COOKIE, ticket_id
-            )
-            if reserved:
-                if reserved.ok:
-                    break  # break to not book multiple buses for same day
+                    # Get ticket ID
+                    ticket_id = get_booking_tickets(bus_line, COOKIE)
+
+                    # cancel existing reservation if it exists
+                    reservation_to_cancel = today_existing_reservations[0]["cancel_id"]
+                    if reservation_to_cancel:
+                        cancel_reservation(reservation_to_cancel, COOKIE)
+
+                    # Attempt to reserve bus ticket
+                    reserved = reserve_bus(
+                        bus_time,
+                        bus_line,
+                        PICKUP_ATCOCODE,
+                        DROPOFF_ATCOCODE,
+                        COOKIE,
+                        ticket_id,
+                    )
+
+                    if reserved and reserved.ok:
+                        log.info(f"✅ Successfully booked PM bus for {bus_time}!")
+                        return True
+                    elif reserved is None:
+                        log.info(
+                            "⚠️ This bus service cannot be booked at this time, trying next..."
+                        )
+                        continue
+                    else:
+                        log.error("🚩 Failed to book this bus, trying next...")
+                        continue
+
+                    log.error("🚩 Failed to book any of the available buses")
+
+            except Exception as e:
+                log.info(
+                    f"⏳ No PM buses available yet (or error occurred). Checking again in {check_interval} seconds... Error: {e}"
+                )
+
+            time.sleep(check_interval)
+
+        except KeyboardInterrupt:
+            log.info("🛑 Home-soon monitoring stopped by user.")
+            break
+        except Exception as e:
+            log.error(f"🚩 Error in home-soon monitoring: {e}")
+            log.info(f"Retrying in {check_interval} seconds...")
+            time.sleep(check_interval)
+
+    return False
+
+
+def book_next_two_weeks(config, busroutes, COOKIE):
+    """
+    Book buses for the next two weeks (original functionality).
+    """
+    log.info("📅 Starting two-week booking mode...")
+
+    # get details of existing bus reservations
+    existing_reservations = get_existing_reservations(COOKIE)
+    # convert time of reservations to string format for comparing with available reservations
+    # split into two lists one for morning and one for evening so we can check if we
+    # have already booked a bus for that part of day
+    existing_reserved_mornings = []
+    existing_reserved_evenings = []
+    for item in existing_reservations:
+        if item[""] != "Cancelled":
+            # if the datetime is before noon
+            if datetime.strptime(item["datetimeISO"], "%Y-%m-%dT%H:%M:%S").hour < 12:
+                existing_reserved_mornings.append(item["dateISO"].strftime("%Y-%m-%d"))
             else:
-                break
+                existing_reserved_evenings.append(item["dateISO"].strftime("%Y-%m-%d"))
+
+    # get string format of every date in next week (bar weekends)
+    next_dates = get_upcoming_dates(start_date=None)
+
+    for TRAVEL_DATE in next_dates:
+        dateISO = datetime.strptime(TRAVEL_DATE, "%Y-%m-%d").date()
+        day_name = dateISO.strftime("%A")  # Get day name like Monday, Tuesday, etc.
+
+        # Skip if day not in config
+        if day_name not in config["days"]:
+            log.info(f"⛔ No configuration for {day_name}. Skipping...")
+            continue
+
+        for period in ["AM", "PM"]:
+            LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE = None, None, None
+            bus_service = None
+
+            if period in config["days"][day_name]:
+                pickup_label = config["days"][day_name][period].get("pickup")
+                dropoff_label = config["days"][day_name][period].get("dropoff")
+
+                if pickup_label and dropoff_label:
+                    # Find the service and stop codes from busroutes.yaml
+                    LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE = (
+                        find_route_and_stop_code(
+                            period, pickup_label, dropoff_label, busroutes
+                        )
+                    )
+
+            # If either pickup or dropoff codes are missing, skip this period
+            if PICKUP_ATCOCODE is None or DROPOFF_ATCOCODE is None:
+                log.info(
+                    f"⛔ No valid configuration for {day_name} {period}. Check spelling on stop names. Skipping..."
+                )
+                continue
+
+            if not LINE_ID:
+                log.error("🚩 could not identify bus route from these stops")
+                raise Exception()
+
+            existing_reservations_period = (
+                existing_reserved_mornings
+                if period == "AM"
+                else existing_reserved_evenings
+            )
+            if TRAVEL_DATE in existing_reservations_period:
+                log.info(f"🚌 Bus already booked for {TRAVEL_DATE}.")
+                continue
+
+            # get list of buses with available seats on the desired date
+            available_buses = get_available_buses(
+                TRAVEL_DATE, LINE_ID, PICKUP_ATCOCODE, DROPOFF_ATCOCODE
+            )
+
+            # attempt booking bus ticket in order of latest departure time
+            for item in available_buses:
+                # get bus departure time and id of bus route (line id)
+                bus_time = item["scheduledDepartureTime"]
+                bus_line = item["lineId"]
+
+                # get id of currently owned ticket
+                ticket_id = get_booking_tickets(bus_line, COOKIE)
+
+                # attempt to reserve bus ticket
+                # on error (e.g. bus is full), try next bus
+                reserved = reserve_bus(
+                    bus_time,
+                    bus_line,
+                    PICKUP_ATCOCODE,
+                    DROPOFF_ATCOCODE,
+                    COOKIE,
+                    ticket_id,
+                )
+                if reserved:
+                    if reserved.ok:
+                        break  # break to not book multiple buses for same day
+                else:
+                    break
+
+
+def cancel_reservation(cancel_id, COOKIE):
+    """
+    Cancel a bus reservation using the provided cancel_id.
+    """
+    url = f"https://wellcomegenomecampus.bushub.co.uk/booking/cancel/{cancel_id}"
+
+    headers = {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "accept-language": "en-GB,en-US;q=0.9,en;q=0.8,fr;q=0.7",
+        "cache-control": "max-age=0",
+        "content-type": "application/x-www-form-urlencoded",
+        "cookie": COOKIE,
+        "origin": "https://wellcomegenomecampus.bushub.co.uk",
+        "referer": "https://wellcomegenomecampus.bushub.co.uk/bookings",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+    }
+
+    response = requests.post(url, headers=headers)
+    if not response.ok:
+        log.error(
+            f"🚩 Something went wrong with cancelling reservation with ID: {cancel_id}."
+        )
+        log.error(response.text)
+        raise Exception(response.raise_for_status())
+
+    log.info(f"✅ Successfully cancelled reservation with ID {cancel_id}")
+
+
+def main():
+    """
+    Main function that handles command line arguments and executes the appropriate mode.
+    """
+    parser = argparse.ArgumentParser(description="Bus reservation automation script")
+    parser.add_argument(
+        "mode",
+        nargs="?",
+        default="continuous",
+        choices=["continuous", "home-soon"],
+        help="Mode to run: continuous (book next 2 weeks) or home-soon (monitor PM bus)",
+    )
+    parser.add_argument(
+        "--check-interval",
+        type=int,
+        default=30,
+        help="Check interval in seconds for home-soon mode (default: 30)",
+    )
+
+    args = parser.parse_args()
+
+    # if login_details file exists, read in username and password
+    login_details = "login_details.txt"
+    if not os.path.exists(login_details):
+        log.error(
+            f"🚩 {login_details} file does not exist. Please create it and add your username and password in the format: username,password"
+        )
+        raise Exception()
+
+    with open(login_details) as f:
+        username, password = f.read().strip().split(",")
+    login_and_save_cookie(username, password)
+
+    # read in cookie file that contains the ; separated string for the BusHub cookie
+    # to obtain it, you open the developer tools in your browser, go to the network tab
+    # login to https://wellcomegenomecampus.bushub.co.uk/bookings and click on the
+    # bookings request, then copy the cookie string from the request headers
+    # save its contents into this file
+    with open("bushub_cookie.txt") as f:
+        COOKIE = f.read().strip()
+        COOKIE = COOKIE.replace("\n", "; ")
+
+    # Dynamically update busroutes.yaml with latest bus stop information
+    log.info("🔄 Fetching latest bus stop information...")
+    try:
+        # Load existing busroutes.yaml if it exists
+        existing_busroutes = {}
+        if os.path.exists("busroutes.yaml"):
+            with open("busroutes.yaml", "r") as file:
+                existing_busroutes = yaml.safe_load(file) or {}
+
+        # Get current bus stops from API
+        current_bus_stops = get_bus_stops(COOKIE)
+
+        # Generate new busroutes structure
+        updated_busroutes = generate_busroutes_yaml(
+            current_bus_stops, existing_busroutes
+        )
+
+        # Save updated busroutes.yaml
+        save_busroutes_yaml(updated_busroutes)
+
+    except Exception as e:
+        log.warning(f"⚠️ Failed to update busroutes.yaml dynamically: {e}")
+        log.info("📝 Continuing with existing busroutes.yaml file...")
+
+    # Load configuration from YAML file
+    with open("config.yaml", "r") as file:
+        config = yaml.safe_load(file)
+
+    # Load bus routes and available stops
+    # these codes can be found by using the chrome app to monitor network traffic when selecting a bus reservation between two stops
+    # in the request that starts with "times?", the preview pane has items, and items in that list will have value lineID
+    with open("busroutes.yaml", "r") as file:
+        busroutes = yaml.safe_load(file)
+
+    # Execute the appropriate mode
+    if args.mode == "home-soon":
+        monitor_and_book_pm_bus(config, busroutes, COOKIE, args.check_interval)
+    else:  # continuous mode (default)
+        book_next_two_weeks(config, busroutes, COOKIE)
+
+
+if __name__ == "__main__":
+    main()

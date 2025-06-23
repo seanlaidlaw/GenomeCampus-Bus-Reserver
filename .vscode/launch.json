@@ -12,6 +12,18 @@
             "console": "integratedTerminal",
             "python": "/Users/sl31/miniforge3/envs/busreservation/bin/python",
             "debugpy": "/Users/sl31/miniforge3/envs/busreservation/bin/debugpy"
+        },
+        {
+            "name": "Python Debugger: Current File (Home Soon)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "home-soon"
+            ],
+            "console": "integratedTerminal",
+            "python": "/Users/sl31/miniforge3/envs/busreservation/bin/python",
+            "debugpy": "/Users/sl31/miniforge3/envs/busreservation/bin/debugpy"
         }
     ]
 }

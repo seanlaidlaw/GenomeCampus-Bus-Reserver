@@ -1,58 +1,83 @@
-# Bus Reservation System
+# Bus Reservation Automation
 
-Automate Genome Campus bus reservations based on a given schedule using the
-`config.yaml` configuration file.
+This script automates bus seat reservations for the Wellcome Genome Campus BusHub service.
 
-## Setup
+## Features
 
-### Prerequisites
+- **Continuous Mode**: Books buses for the next 2 weeks (default behavior)
+- **Home-Soon Mode**: Continuously monitors for PM bus availability and books as soon as it becomes available
 
-- Python 3.x
-- `yaml` library: Install with `pip install pyyaml`
-- `BeautifulSoup` library: Install with `pip install beautifulsoup4`
+## Usage
 
-### Configuration
+### Continuous Mode (Default)
 
-1. Create the file `login_details.txt` in the root directory of the repository.
-   This file should contain your username and password used to log into bus app.
-   The file should be of format (without the quotes): "email,password"
-1. Modify the `config.yaml` from the defaults provided in root directory of the
-   repository.
-1. Define your pickup and dropoff labels for each day of the week in the
-   following format:
+Books buses for the next 2 weeks based on your configuration:
 
-```{yaml}
-days:
-    Monday:
-        AM:
-            pickup: "Your Pickup Stop Label Here"
-            dropoff: "Your Dropoff Stop Label Here"
-        PM:
-            pickup: "Your Pickup Stop Label Here"
-            dropoff: "Your Dropoff Stop Label Here"
-    Tuesday:
-        AM:
-            pickup: "Your Pickup Stop Label Here"
-            dropoff: "Your Dropoff Stop Label Here"
-        PM:
-            pickup: "Your Pickup Stop Label Here"
-            dropoff: "Your Dropoff Stop Label Here"
-    ...
+```bash
+python reserve_bus_seats_bushub.py
+# or
+python reserve_bus_seats_bushub.py continuous
 ```
-Replace "Your Pickup Stop Label Here" and "Your Dropoff Stop Label Here" with the
-appropriate stop names. Do not use stop IDs directly; instead, use the stop labels
-as defined in the bus routes (e.g., "St Paul's Rd", "Centennial Hotel").
 
-The script will automatically look up the corresponding stop IDs and service numbers
-based on the labels you provide in the config.yaml, using the busroutes.yaml lookup file.
-To get the stop names, look inside the busroutes.yaml file.
+### Home-Soon Mode
 
+Continuously monitors for PM bus availability and books immediately when available:
 
-### Usage
+```bash
+python reserve_bus_seats_bushub.py home-soon
+```
 
-1. Run the main script:
+You can also specify a custom check interval (in seconds):
 
-   `python reserve_bus_seats_bushub.py`
+```bash
+python reserve_bus_seats_bushub.py home-soon --check-interval 60
+```
 
-2. The script will automatically book buses based on the configuration provided in config.yaml.
-The stop codes and bus service numbers will be looked up dynamically from the busroutes.yaml based on the stop labels you define.
+## Configuration
+
+### Required Files
+
+1. **`login_details.txt`**: Contains your username and password in the format `username,password`
+2. **`config.yaml`**: Defines your bus routes for each day of the week
+3. **`bushub_cookie.txt`**: Contains your authentication cookie (automatically generated)
+
+### Config.yaml Format
+
+```yaml
+days:
+  Monday:
+    AM:
+      pickup: "Centennial Hotel - S"
+      dropoff: "Wellcome Genome Campus"
+    PM:
+      pickup: "Wellcome Genome Campus"
+      dropoff: "Brooklands Av - N (RQ)"
+  # ... repeat for other days
+```
+
+## How It Works
+
+### Continuous Mode
+
+- Fetches the latest bus stop information from the API
+- Updates `busroutes.yaml` with current route data
+- Checks existing reservations to avoid duplicates
+- Books buses for the next 2 weeks (weekdays only)
+
+### Home-Soon Mode
+
+- Monitors only the PM route for today
+- Checks every 30 seconds (configurable) for bus availability
+- Books immediately when a bus with available seats is found
+- Stops when a reservation is successfully made or manually interrupted
+
+## Requirements
+
+- Python 3.6+
+- Required packages: `requests`, `yaml`, `beautifulsoup4`
+
+Install dependencies:
+
+```bash
+pip install requests pyyaml beautifulsoup4
+```
