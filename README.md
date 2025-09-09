@@ -5,7 +5,7 @@ This script automates bus seat reservations for the Wellcome Genome Campus BusHu
 ## Features
 
 - **Continuous Mode**: Books buses for the next 2 weeks (default behavior)
-- **Home-Soon Mode**: Continuously monitors for PM bus availability and books as soon as it becomes available
+- **Home-Soon Mode**: Continuously monitors for PM bus availability and books as soon as it becomes available. This will cancel an existing reservation when an earlier bus becomes available, and it will book that earlier one instead.
 
 ## Usage
 
@@ -67,8 +67,10 @@ days:
 ### Home-Soon Mode
 
 - Monitors only the PM route for today
-- Checks every 30 seconds (configurable) for bus availability
-- Books immediately when a bus with available seats is found
+- Checks every 30 seconds (configurable) for availability of a bus earlier than
+  any existing reservation
+- Books immediately when a bus with available seats is found, including the
+cancellation of an existing but later bus reservation
 - Stops when a reservation is successfully made or manually interrupted
 
 ## Requirements
