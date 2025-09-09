@@ -24,25 +24,23 @@ CC:
       Buchan St Roundabout: 0500CCITY426
 EC:
   AM:
-    Service: '90607'
+    Service: '91704'
     Stops:
       River Lane - E: 0500CCITY166
       CUFC, Ditton Walk - E: 0500CCITY191
-      Peverel Rd - S: 0500CCITY048
-      Sainsbury's (nr bridge) - E: 0500CCITY040
-      St Andrew's Ch - NE: BUSHUBnKmx51dj
-      Tamarin Gardens: 0500STEVE002
+      Stanesfield Rd - S (temp): 0500CCITY237
+      Newmarket Rd - N (temp): 0500CCITY148
+      Tamarin Gdns - S: 0500STEVE002
       C'bridge Rd - E: 0500SFULB006
       Wellcome Genome Campus: BUSHUBd6ZTW0SS
   PM:
-    Service: '90607'
+    Service: '91704'
     Stops:
       Wellcome Genome Campus: BUSHUBd6ZTW0SS
       C'bridge Rd - W (RQ): 0500SFULB010
-      Tamarin Gardens: 0500STEVE010
-      St Andrew's Ch. (opp) - N (RQ): 0500CCITY341
-      Sainsbury's (nr bridge) - W (RQ): 0500CCITY098
-      Peverel Rd - N: 0500CCITY281
+      Tamarin Gdns - N (RQ): 0500STEVE010
+      Thorleye Rd (Temp) RQ: 0500CCITY161
+      Stanesfield Rd - N (Temp) RQ: 0500CCITY150
       CUFC, Ditton Walk - W (RQ): 0500CCITY213
       Retail Park - W (RQ): 0500CCITY482
 NC:
